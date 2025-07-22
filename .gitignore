@@ -1,0 +1,23 @@
+
+
+
+
+node_modules/
+venv/
+__pycache__/
+.env
+# Backend
+backend/venv/
+__pycache__/
+*.pyc
+instance/
+.env
+
+# Frontend
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/.vite/
+
+# General
+.DS_Store
+*.log
