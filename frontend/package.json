@@ -10,5 +10,9 @@
     "@sveltejs/kit": "next",
     "svelte": "^3.0.0",
     "vite": "^4.0.0"
+  },
+  "dependencies": {
+    "gsap": "^3.13.0",
+    "locomotive-scroll": "^4.1.4"
   }
 }

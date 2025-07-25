@@ -1,7 +1,10 @@
 <script>
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+
   let email = '';
   let password = '';
-  let message = '';
+  let error = '';
 
   async function login() {
     const res = await fetch('http://localhost:5000/login', {
@@ -11,16 +14,20 @@
     });
 
     const data = await res.json();
-    message = data.message;
-
-    if (res.ok) {
-      window.location.href = '/dashboard';
+    if (res.status === 200) {
+      goto('/dashboard');
+    } else {
+      error = data.message;
     }
   }
 </script>
 
-<h1 class="text-3xl font-bold mb-4">Login</h1>
-<input bind:value={email} type="email" placeholder="Email" class="border p-2 mb-2 block w-full" />
-<input bind:value={password} type="password" placeholder="Password" class="border p-2 mb-2 block w-full" />
-<button on:click={login} class="bg-green-600 text-white px-4 py-2">Login</button>
-<p class="mt-2 text-sm text-gray-700">{message}</p>
+<div class="min-h-screen flex flex-col items-center justify-center space-y-4">
+  <h2 class="text-2xl font-semibold">Login</h2>
+  <input type="email" placeholder="Email" bind:value={email} class="p-2 border rounded" />
+  <input type="password" placeholder="Password" bind:value={password} class="p-2 border rounded" />
+  <button on:click={login} class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+  {#if error}
+    <p class="text-red-500">{error}</p>
+  {/if}
+</div>
