@@ -1,29 +1,31 @@
 <script>
-  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
 
   let email = '';
   let password = '';
+  let role = 'user'; // Default role
   let errorMessage = '';
 
   async function handleRegister() {
-    errorMessage = ''; // Clear existing errors
+    errorMessage = '';
     try {
       const res = await fetch('http://127.0.0.1:5000/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+          email,
+          password,
+          role
+        })
       });
 
       const data = await res.json();
 
       if (res.status === 201) {
-        // Registration successful
         goto('/login');
       } else {
-        // Handle error message from backend
         errorMessage = data.message || 'Registration failed';
       }
     } catch (err) {
@@ -32,14 +34,74 @@
   }
 </script>
 
-<h2>Register</h2>
+<section class="register-section">
+  <h2>Register</h2>
 
-<form on:submit|preventDefault={handleRegister}>
-  <input type="email" bind:value={email} placeholder="Email" required />
-  <input type="password" bind:value={password} placeholder="Password" required />
-  <button type="submit">Register</button>
-</form>
+  <form on:submit|preventDefault={handleRegister}>
+    <input type="email" bind:value={email} placeholder="Email" required />
+    <input type="password" bind:value={password} placeholder="Password" required />
+    
+    <!-- Role selection dropdown -->
+    <select bind:value={role}>
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select>
 
-{#if errorMessage}
-  <p style="color: red">{errorMessage}</p>
-{/if}
+    <button type="submit">Register</button>
+  </form>
+
+  {#if errorMessage}
+    <p class="error">{errorMessage}</p>
+  {/if}
+</section>
+
+<style>
+  .register-section {
+    max-width: 400px;
+    margin: 6rem auto;
+    padding: 2rem;
+    background: #1b1b1b;
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+  }
+
+  h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  input, select {
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #333;
+    color: white;
+  }
+
+  button {
+    background: #0af;
+    color: white;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  button:hover {
+    background: #09c;
+  }
+
+  .error {
+    margin-top: 1rem;
+    color: #f55;
+  }
+</style>

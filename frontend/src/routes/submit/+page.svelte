@@ -66,11 +66,19 @@
 <style>
   .submit-section {
     max-width: 600px;
-    margin: 5rem auto;
+    margin: 6rem auto 4rem;
     padding: 2rem;
     background: #1b1b1b;
     border-radius: 10px;
     color: white;
+    box-sizing: border-box;
+    min-height: calc(100vh - 100px); /* Ensure full viewport space */
+  }
+
+  h1 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    text-align: center;
   }
 
   form {
@@ -86,6 +94,11 @@
     color: white;
     border: none;
     border-radius: 8px;
+    width: 100%;
+  }
+
+  textarea {
+    min-height: 120px;
   }
 
   button {
@@ -96,6 +109,7 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    transition: background 0.3s ease;
   }
 
   button:hover {
@@ -105,10 +119,12 @@
   .success {
     color: #0f0;
     margin-top: 1rem;
+    text-align: center;
   }
 
   .error {
     color: #f55;
     margin-top: 1rem;
+    text-align: center;
   }
 </style>

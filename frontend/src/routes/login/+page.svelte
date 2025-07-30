@@ -1,6 +1,6 @@
 <script>
-  import { loginUser } from '$lib/api.js';
   import { goto } from '$app/navigation';
+
   let email = '';
   let password = '';
   let error = '';
@@ -9,12 +9,29 @@
   async function handleLogin() {
     loading = true;
     error = '';
+
     try {
-      const user = await loginUser({ email, password });
-      // Save token or session info here if needed
-      goto('/dashboard'); // Redirect to a dashboard or home page
+      const res = await fetch('http://127.0.0.1:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('userRole', data.role); // Save role to localStorage
+        localStorage.setItem('userEmail', email);    // Optional: store email
+        if (data.role === 'admin') {
+          goto('/admin');
+        } else {
+          goto('/dashboard');
+        }
+      } else {
+        error = data.message || 'Login failed.';
+      }
     } catch (err) {
-      error = err.message;
+      error = 'Server error. Please try again.';
     } finally {
       loading = false;
     }
@@ -52,6 +69,8 @@
     border: none;
     border-radius: 6px;
     font-size: 1rem;
+    background: #333;
+    color: white;
   }
 
   button {
