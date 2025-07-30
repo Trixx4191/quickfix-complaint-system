@@ -23,21 +23,7 @@ class User(db.Model):
 def home():
     return {"status": "QuickFix API Running"}
 
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    email = data['email']
-    password = data['password']
-    
-    if User.query.filter_by(email=email).first():
-        return jsonify({'message': 'User already exists'}), 409
 
-    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-    new_user = User(email=email, password=hashed_pw)
-    db.session.add(new_user)
-    db.session.commit()
-    
-    return jsonify({'message': 'User registered successfully'}), 201
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -76,6 +62,21 @@ def create_complaint():
 def list_complaints():
     return jsonify(complaints)
 
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    email = data['email']
+    password = data['password']
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({'message': 'User already exists'}), 409
+
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user = User(email=email, password=hashed_pw)
+    db.session.add(new_user)
+    db.session.commit()
+    
+    return jsonify({'message': 'User registered successfully'}), 201
 
 # DB Init
 with app.app_context():
@@ -83,3 +84,4 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True)
+

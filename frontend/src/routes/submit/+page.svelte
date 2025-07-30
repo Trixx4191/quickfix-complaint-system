@@ -1,43 +1,114 @@
 <script>
+  import { onMount } from 'svelte';
+
   let title = '';
   let description = '';
   let message = '';
+  let error = '';
 
   async function submitComplaint() {
-    const res = await fetch('http://localhost:5000/complaints', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description })
-    });
+    message = '';
+    error = '';
 
-    const data = await res.json();
-    message = data.message;
+    if (!title || !description) {
+      error = 'Please fill in all fields.';
+      return;
+    }
 
-    if (res.ok) {
-      // Optionally clear form
-      title = '';
-      description = '';
+    try {
+      const res = await fetch('http://localhost:5000/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        message = data.message;
+        title = '';
+        description = '';
+      } else {
+        error = data.message || 'Failed to submit complaint.';
+      }
+    } catch (err) {
+      error = 'Failed to connect to the server.';
     }
   }
 </script>
 
-<h1 class="text-2xl font-bold mb-4">Submit a Complaint</h1>
+<section class="submit-section">
+  <h1>Submit a Complaint</h1>
 
-<input
-  type="text"
-  bind:value={title}
-  placeholder="Complaint Title"
-  class="border p-2 block w-full mb-2"
-/>
-<textarea
-  bind:value={description}
-  placeholder="Describe your complaint"
-  class="border p-2 block w-full mb-2"
-></textarea>
-<button on:click={submitComplaint} class="bg-blue-600 text-white px-4 py-2 rounded">
-  Submit
-</button>
+  <form on:submit|preventDefault={submitComplaint}>
+    <input
+      type="text"
+      placeholder="Complaint Title"
+      bind:value={title}
+      required
+    />
+    <textarea
+      placeholder="Describe your issue"
+      bind:value={description}
+      required
+    ></textarea>
+    <button type="submit">Submit</button>
+  </form>
 
-{#if message}
-  <p class="mt-4 text-green-600 font-semibold">{message}</p>
-{/if}
+  {#if message}
+    <p class="success">{message}</p>
+  {/if}
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
+</section>
+
+<style>
+  .submit-section {
+    max-width: 600px;
+    margin: 5rem auto;
+    padding: 2rem;
+    background: #1b1b1b;
+    border-radius: 10px;
+    color: white;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  input, textarea {
+    padding: 0.8rem;
+    font-size: 1rem;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 8px;
+  }
+
+  button {
+    background: #0af;
+    color: white;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #09c;
+  }
+
+  .success {
+    color: #0f0;
+    margin-top: 1rem;
+  }
+
+  .error {
+    color: #f55;
+    margin-top: 1rem;
+  }
+</style>

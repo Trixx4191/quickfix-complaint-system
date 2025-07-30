@@ -33,19 +33,27 @@
 
     // Scroll-triggered Sections
     gsap.utils.toArray('.section').forEach((section) => {
-      gsap.from(section, {
-        opacity: 0,
-        y: 50,
-        duration: 1,
-        scrollTrigger: {
-          trigger: section,
-          start: 'top 80%',
-          toggleActions: 'play none none none'
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 50 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            end: 'top 30%',
+            toggleActions: 'play none none reverse',
+          },
         }
-      });
+      );
     });
   });
 </script>
+
+<!-- DO NOT include #smooth-wrapper here! -->
 
 <!-- Hero Section -->
 <section id="hero" class="hero section" data-scroll-section>
@@ -71,13 +79,6 @@
 </section>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: sans-serif;
-    background: #0e0e0e;
-    color: #fff;
-  }
-
   .hero {
     height: 100vh;
     display: flex;

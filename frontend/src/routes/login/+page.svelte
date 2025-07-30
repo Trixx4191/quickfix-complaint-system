@@ -1,33 +1,70 @@
 <script>
-  import { onMount } from 'svelte';
+  import { loginUser } from '$lib/api.js';
   import { goto } from '$app/navigation';
-
   let email = '';
   let password = '';
   let error = '';
+  let loading = false;
 
-  async function login() {
-    const res = await fetch('http://localhost:5000/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json();
-    if (res.status === 200) {
-      goto('/dashboard');
-    } else {
-      error = data.message;
+  async function handleLogin() {
+    loading = true;
+    error = '';
+    try {
+      const user = await loginUser({ email, password });
+      // Save token or session info here if needed
+      goto('/dashboard'); // Redirect to a dashboard or home page
+    } catch (err) {
+      error = err.message;
+    } finally {
+      loading = false;
     }
   }
 </script>
 
-<div class="min-h-screen flex flex-col items-center justify-center space-y-4">
-  <h2 class="text-2xl font-semibold">Login</h2>
-  <input type="email" placeholder="Email" bind:value={email} class="p-2 border rounded" />
-  <input type="password" placeholder="Password" bind:value={password} class="p-2 border rounded" />
-  <button on:click={login} class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+<form on:submit|preventDefault={handleLogin}>
+  <h2>Login to QuickFix</h2>
   {#if error}
-    <p class="text-red-500">{error}</p>
+    <p style="color: red">{error}</p>
   {/if}
-</div>
+  <input type="email" bind:value={email} placeholder="Email" required />
+  <input type="password" bind:value={password} placeholder="Password" required />
+  <button disabled={loading}>
+    {#if loading} Logging in... {/if}
+    {#if !loading} Login {/if}
+  </button>
+</form>
+
+<style>
+  form {
+    max-width: 400px;
+    margin: 5rem auto;
+    background: #1a1a1a;
+    padding: 2rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    color: white;
+  }
+
+  input {
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  button {
+    padding: 0.75rem;
+    background: #0af;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    background: #555;
+  }
+</style>

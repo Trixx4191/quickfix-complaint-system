@@ -42,6 +42,10 @@
       <a on:click={() => scrollToSection('about')}>About</a>
       <a on:click={() => scrollToSection('how')}>How it Works</a>
       <a href="/login">Login</a>
+      <!-- Add these inside the nav-links div -->
+<a href="/submit">Submit</a>
+<a href="/complaints">Complaints</a>
+
     </div>
   </div>
 </nav>
