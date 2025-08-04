@@ -20,18 +20,20 @@
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem('userRole', data.role); // Save role to localStorage
-        localStorage.setItem('userEmail', email);    // Optional: store email
+        localStorage.setItem('token', data.token);       // ✅ store JWT
+        localStorage.setItem('userRole', data.role);      // store role
+        localStorage.setItem('userEmail', email);         // store email
+
         if (data.role === 'admin') {
           goto('/admin');
         } else {
           goto('/dashboard');
         }
       } else {
-        error = data.message || 'Login failed.';
+        error = data.message || 'Login failed. Please try again.';
       }
     } catch (err) {
-      error = 'Server error. Please try again.';
+      error = 'Server error. Please try again later.';
     } finally {
       loading = false;
     }

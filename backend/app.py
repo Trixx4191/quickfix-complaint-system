@@ -3,17 +3,23 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from functools import wraps
 from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
+# Config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
 
+# Extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 migrate = Migrate(app, db)
+jwt = JWTManager(app)
 
 # Models
 class User(db.Model):
@@ -29,19 +35,27 @@ class Complaint(db.Model):
     description = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='Pending')
     user_email = db.Column(db.String(120), nullable=False)
-
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at = db.Column(db.DateTime, nullable=True)
     resolved_by = db.Column(db.String(120), nullable=True)
     resolved_description = db.Column(db.Text, nullable=True)
 
+# Role-based admin guard
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        current_user = get_jwt_identity()
+        if current_user['role'] != 'admin':
+            return jsonify({'message': 'Admins only'}), 403
+        return fn(*args, **kwargs)
+    return wrapper
 
 # Routes
 @app.route('/')
 def home():
     return {"status": "QuickFix API Running"}
-
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -51,69 +65,9 @@ def login():
 
     user = User.query.filter_by(email=email).first()
     if user and bcrypt.check_password_hash(user.password, password):
-        return jsonify({
-            'message': 'Login successful',
-            'role': user.role
-        }), 200
-    else:
-        return jsonify({'message': 'Invalid credentials'}), 401
-
-
-@app.route('/complaints', methods=['POST'])
-def create_complaint():
-    data = request.get_json()
-    title = data.get('title')
-    description = data.get('description')
-    email = data.get('email', 'anonymous@example.com')
-
-    if not title or not description:
-        return jsonify({'message': 'Missing title or description'}), 400
-
-    complaint = Complaint(title=title, description=description, user_email=email)
-    db.session.add(complaint)
-    db.session.commit()
-
-    return jsonify({'message': 'Complaint created successfully'}), 201
-
-
-@app.route('/complaints', methods=['GET'])
-def list_complaints():
-    complaints = Complaint.query.all()
-    return jsonify([
-        {
-            'id': c.id,
-            'title': c.title,
-            'description': c.description,
-            'status': c.status,
-            'user_email': c.user_email,
-            'created_at': c.created_at.isoformat() if c.created_at else None,
-            'updated_at': c.updated_at.isoformat() if c.updated_at else None,
-            'resolved_at': c.resolved_at.isoformat() if c.resolved_at else None,
-            'resolved_by': c.resolved_by,
-            'resolved_description': c.resolved_description
-        } for c in complaints
-    ])
-
-
-@app.route('/complaints/<int:id>', methods=['PATCH'])
-def update_complaint_status(id):
-    data = request.get_json()
-    status = data.get('status')
-    resolved_by = data.get('resolved_by')
-    resolved_description = data.get('resolved_description')
-
-    complaint = Complaint.query.get_or_404(id)
-
-    if status:
-        complaint.status = status
-        if status == 'Resolved':
-            complaint.resolved_at = datetime.utcnow()
-            complaint.resolved_by = resolved_by
-            complaint.resolved_description = resolved_description
-
-    db.session.commit()
-    return jsonify({'message': 'Status updated successfully'})
-
+        token = create_access_token(identity={'email': user.email, 'role': user.role})
+        return jsonify({'message': 'Login successful', 'token': token, 'role': user.role}), 200
+    return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
@@ -132,6 +86,67 @@ def api_register():
 
     return jsonify({'message': 'User registered successfully'}), 201
 
+@app.route('/complaints', methods=['POST'])
+@jwt_required()
+def create_complaint():
+    data = request.get_json()
+    current_user = get_jwt_identity()
+
+    title = data.get('title')
+    description = data.get('description')
+
+    if not title or not description:
+        return jsonify({'message': 'Missing title or description'}), 400
+
+    complaint = Complaint(title=title, description=description, user_email=current_user['email'])
+    db.session.add(complaint)
+    db.session.commit()
+
+    return jsonify({'message': 'Complaint created successfully'}), 201
+
+@app.route('/complaints', methods=['GET'])
+@admin_required
+def list_complaints():
+    complaints = Complaint.query.all()
+    return jsonify([
+        {
+            'id': c.id,
+            'title': c.title,
+            'description': c.description,
+            'status': c.status,
+            'user_email': c.user_email,
+            'created_at': c.created_at.isoformat() if c.created_at else None,
+            'updated_at': c.updated_at.isoformat() if c.updated_at else None,
+            'resolved_at': c.resolved_at.isoformat() if c.resolved_at else None,
+            'resolved_by': c.resolved_by,
+            'resolved_description': c.resolved_description
+        } for c in complaints
+    ])
+
+@app.route('/complaints/<int:id>', methods=['PATCH'])
+@admin_required
+def update_complaint_status(id):
+    data = request.get_json()
+    complaint = Complaint.query.get_or_404(id)
+
+    status = data.get('status')
+    resolved_by = data.get('resolved_by')
+    resolved_description = data.get('resolved_description')
+
+    if status:
+        complaint.status = status
+        if status.lower() == 'resolved':
+            complaint.resolved_at = datetime.utcnow()
+            complaint.resolved_by = resolved_by
+            complaint.resolved_description = resolved_description
+
+    db.session.commit()
+    return jsonify({'message': 'Status updated successfully'})
+
+@app.route('/me', methods=['GET'])
+@jwt_required()
+def me():
+    return jsonify(get_jwt_identity())
 
 # DB Init
 with app.app_context():
@@ -139,3 +154,4 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    

@@ -5,20 +5,17 @@
   let password = '';
   let role = 'user'; // Default role
   let errorMessage = '';
+  let loading = false;
 
   async function handleRegister() {
+    loading = true;
     errorMessage = '';
+
     try {
       const res = await fetch('http://127.0.0.1:5000/api/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          role
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role })
       });
 
       const data = await res.json();
@@ -30,6 +27,8 @@
       }
     } catch (err) {
       errorMessage = 'Server error. Please try again.';
+    } finally {
+      loading = false;
     }
   }
 </script>
@@ -40,14 +39,16 @@
   <form on:submit|preventDefault={handleRegister}>
     <input type="email" bind:value={email} placeholder="Email" required />
     <input type="password" bind:value={password} placeholder="Password" required />
-    
-    <!-- Role selection dropdown -->
+
     <select bind:value={role}>
       <option value="user">User</option>
       <option value="admin">Admin</option>
     </select>
 
-    <button type="submit">Register</button>
+    <button type="submit" disabled={loading}>
+      {#if loading} Registering... {/if}
+      {#if !loading} Register {/if}
+    </button>
   </form>
 
   {#if errorMessage}
@@ -98,6 +99,11 @@
 
   button:hover {
     background: #09c;
+  }
+
+  button:disabled {
+    background: #444;
+    cursor: wait;
   }
 
   .error {
