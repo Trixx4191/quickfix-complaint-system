@@ -1,25 +1,20 @@
 <script>
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
-  import { user } from '../stores/user.js'; // adjust path if needed
+  import { goto } from '$app/navigation';
+  import { user } from '../stores/user.js';
 
   let scroll;
   let isScrolled = false;
   let menuOpen = false;
 
-  function scrollToSection(id) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      menuOpen = false; // Close menu after clicking link
-    }
-  }
-
   onMount(async () => {
     if (!browser) return;
 
     const saved = localStorage.getItem('user');
-    if (saved) user.set(JSON.parse(saved));
+    if (saved) {
+      user.set(JSON.parse(saved));
+    }
 
     window.addEventListener('scroll', () => {
       isScrolled = window.scrollY > 50;
@@ -34,7 +29,24 @@
       scroll.scrollTo(0, { duration: 0 });
     });
   });
+
+  function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      menuOpen = false;
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+    user.set({});
+    goto('/');
+  }
 </script>
+
 
 <nav class:isScrolled>
   <div class="nav-content">
@@ -51,13 +63,18 @@
     <div class="nav-links" class:open={menuOpen}>
       <a on:click={() => scrollToSection('about')}>About</a>
       <a on:click={() => scrollToSection('how')}>How it Works</a>
-      <a href="/login">Login</a>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/submit">Submit</a>
-      <a href="/register">Register</a>
-      <a href="/complaints">Complaints</a>
-      {#if $user.role === 'admin'}
-        <a href="/admin">Admin</a>
+
+      {#if !$user?.email}
+        <a href="/login">Login</a>
+        <a href="/register">Register</a>
+      {:else}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/submit">Submit</a>
+        <a href="/complaints">Complaints</a>
+        {#if $user.role === 'admin'}
+          <a href="/admin">Admin</a>
+        {/if}
+        <a on:click={logout}>Logout</a>
       {/if}
     </div>
   </div>

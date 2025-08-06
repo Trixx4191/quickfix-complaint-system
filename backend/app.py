@@ -6,11 +6,14 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from functools import wraps
 from datetime import datetime
+from flasgger import Swagger
+
 
 app = Flask(__name__)
 CORS(app)
+swagger = Swagger(app, template_file="docs/swagger.yaml")
 
-# Config
+# Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
@@ -28,7 +31,6 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)
     role = db.Column(db.String(20), nullable=False)
 
-
 class Complaint(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
@@ -41,7 +43,14 @@ class Complaint(db.Model):
     resolved_by = db.Column(db.String(120), nullable=True)
     resolved_description = db.Column(db.Text, nullable=True)
 
-# Role-based admin guard
+# CORS Middleware
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS')
+    return response
+
+# Role-based Admin Decorator
 def admin_required(fn):
     @wraps(fn)
     @jwt_required()
@@ -55,26 +64,44 @@ def admin_required(fn):
 # Routes
 @app.route('/')
 def home():
-    return {"status": "QuickFix API Running"}
+    return jsonify({"status": "QuickFix API Running"}), 200
 
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    email = data['email']
-    password = data['password']
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password required'}), 400
 
     user = User.query.filter_by(email=email).first()
-    if user and bcrypt.check_password_hash(user.password, password):
+    success = user and bcrypt.check_password_hash(user.password, password)
+
+    print(f"[LOGIN ATTEMPT] {email} - {'✅ Success' if success else '❌ Failed'}")
+
+    if success:
         token = create_access_token(identity={'email': user.email, 'role': user.role})
-        return jsonify({'message': 'Login successful', 'token': token, 'role': user.role}), 200
+        return jsonify({
+            'message': 'Login successful',
+            'token': token,
+            'role': user.role
+        }), 200
+
     return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.get_json()
-    email = data['email']
-    password = data['password']
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
     role = data.get('role', 'user')
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password are required'}), 400
+
+    if len(password) < 6:
+        return jsonify({'message': 'Password must be at least 6 characters'}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 409
@@ -84,6 +111,7 @@ def api_register():
     db.session.add(new_user)
     db.session.commit()
 
+    print(f"[REGISTER] New user: {email} - Role: {role}")
     return jsonify({'message': 'User registered successfully'}), 201
 
 @app.route('/complaints', methods=['POST'])
@@ -92,13 +120,17 @@ def create_complaint():
     data = request.get_json()
     current_user = get_jwt_identity()
 
-    title = data.get('title')
-    description = data.get('description')
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
 
     if not title or not description:
         return jsonify({'message': 'Missing title or description'}), 400
 
-    complaint = Complaint(title=title, description=description, user_email=current_user['email'])
+    complaint = Complaint(
+        title=title,
+        description=description,
+        user_email=current_user['email']
+    )
     db.session.add(complaint)
     db.session.commit()
 
@@ -121,17 +153,18 @@ def list_complaints():
             'resolved_by': c.resolved_by,
             'resolved_description': c.resolved_description
         } for c in complaints
-    ])
+    ]), 200
 
 @app.route('/complaints/<int:id>', methods=['PATCH'])
 @admin_required
 def update_complaint_status(id):
     data = request.get_json()
+    current_user = get_jwt_identity()
     complaint = Complaint.query.get_or_404(id)
 
-    status = data.get('status')
-    resolved_by = data.get('resolved_by')
-    resolved_description = data.get('resolved_description')
+    status = data.get('status', '').strip()
+    resolved_by = data.get('resolved_by', current_user['email'])
+    resolved_description = data.get('resolved_description', '')
 
     if status:
         complaint.status = status
@@ -140,18 +173,19 @@ def update_complaint_status(id):
             complaint.resolved_by = resolved_by
             complaint.resolved_description = resolved_description
 
-    db.session.commit()
-    return jsonify({'message': 'Status updated successfully'})
+        db.session.commit()
+        return jsonify({'message': 'Status updated successfully'}), 200
+
+    return jsonify({'message': 'No status provided'}), 400
 
 @app.route('/me', methods=['GET'])
 @jwt_required()
 def me():
-    return jsonify(get_jwt_identity())
+    return jsonify(get_jwt_identity()), 200
 
-# DB Init
+# DB Initialization
 with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)
-    

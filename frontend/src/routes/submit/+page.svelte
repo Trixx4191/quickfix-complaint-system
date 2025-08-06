@@ -10,6 +10,14 @@
     message = '';
     error = '';
 
+    const token = localStorage.getItem('token');
+    const email = localStorage.getItem('userEmail');
+
+    if (!token || !email) {
+      error = 'You must be logged in to submit a complaint.';
+      return;
+    }
+
     if (!title || !description) {
       error = 'Please fill in all fields.';
       return;
@@ -18,8 +26,11 @@
     try {
       const res = await fetch('http://localhost:5000/complaints', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title, description, email })
       });
 
       const data = await res.json();
@@ -72,7 +83,7 @@
     border-radius: 10px;
     color: white;
     box-sizing: border-box;
-    min-height: calc(100vh - 100px); /* Ensure full viewport space */
+    min-height: calc(100vh - 100px);
   }
 
   h1 {

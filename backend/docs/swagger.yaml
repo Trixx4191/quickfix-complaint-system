@@ -1,0 +1,128 @@
+swagger: "2.0"
+info:
+  title: QuickFix API
+  description: API documentation for the QuickFix Complaint Management System
+  version: "1.0.0"
+host: localhost:5000
+basePath: /
+schemes:
+  - http
+paths:
+  /:
+    get:
+      summary: QuickFix API Home
+      responses:
+        200:
+          description: API is running
+  /login:
+    post:
+      summary: Login user and return JWT token
+      parameters:
+        - in: body
+          name: credentials
+          description: Email and password
+          required: true
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+              password:
+                type: string
+      responses:
+        200:
+          description: Login successful
+        401:
+          description: Invalid credentials
+  /api/register:
+    post:
+      summary: Register a new user
+      parameters:
+        - in: body
+          name: user
+          description: New user details
+          required: true
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+              password:
+                type: string
+              role:
+                type: string
+      responses:
+        201:
+          description: User registered successfully
+        409:
+          description: User already exists
+  /complaints:
+    get:
+      summary: List all complaints (Admin only)
+      security:
+        - Bearer: []
+      responses:
+        200:
+          description: List of complaints
+    post:
+      summary: Create a new complaint
+      security:
+        - Bearer: []
+      parameters:
+        - in: body
+          name: complaint
+          description: Complaint details
+          required: true
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+      responses:
+        201:
+          description: Complaint created successfully
+  /complaints/{id}:
+    patch:
+      summary: Update complaint status (Admin only)
+      security:
+        - Bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: status
+          description: Status update
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              resolved_by:
+                type: string
+              resolved_description:
+                type: string
+      responses:
+        200:
+          description: Status updated
+        404:
+          description: Complaint not found
+  /me:
+    get:
+      summary: Get current user identity
+      security:
+        - Bearer: []
+      responses:
+        200:
+          description: Current user info
+
+securityDefinitions:
+  Bearer:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"'
