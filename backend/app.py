@@ -8,9 +8,8 @@ from functools import wraps
 from datetime import datetime
 from flasgger import Swagger
 
-
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 swagger = Swagger(app, template_file="docs/swagger.yaml")
 
 # Configuration
@@ -42,13 +41,6 @@ class Complaint(db.Model):
     resolved_at = db.Column(db.DateTime, nullable=True)
     resolved_by = db.Column(db.String(120), nullable=True)
     resolved_description = db.Column(db.Text, nullable=True)
-
-# CORS Middleware
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS')
-    return response
 
 # Role-based Admin Decorator
 def admin_required(fn):
@@ -177,6 +169,45 @@ def update_complaint_status(id):
         return jsonify({'message': 'Status updated successfully'}), 200
 
     return jsonify({'message': 'No status provided'}), 400
+
+# NEW: Complaint stats for admin
+@app.route('/admin/complaints/stats', methods=['GET'])
+@admin_required
+def complaint_stats():
+    total = Complaint.query.count()
+    pending = Complaint.query.filter_by(status='Pending').count()
+    resolved = Complaint.query.filter_by(status='Resolved').count()
+    return jsonify({
+        "total": total,
+        "pending": pending,
+        "resolved": resolved
+    }), 200
+
+# NEW: Search + filter
+@app.route('/admin/complaints', methods=['GET'])
+@admin_required
+def list_complaints_advanced():
+    status = request.args.get('status')
+    search = request.args.get('search')
+
+    query = Complaint.query
+    if status:
+        query = query.filter_by(status=status)
+    if search:
+        query = query.filter(
+            Complaint.title.ilike(f"%{search}%") |
+            Complaint.user_email.ilike(f"%{search}%")
+        )
+
+    complaints = query.all()
+    return jsonify([{
+        'id': c.id,
+        'title': c.title,
+        'description': c.description,
+        'status': c.status,
+        'user_email': c.user_email,
+        'created_at': c.created_at.isoformat() if c.created_at else None
+    } for c in complaints]), 200
 
 @app.route('/me', methods=['GET'])
 @jwt_required()
