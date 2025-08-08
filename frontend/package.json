@@ -1,18 +1,31 @@
 {
-  "name": "quickfix-frontend",
-  "type": "module",
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@sveltejs/kit": "next",
-    "svelte": "^3.0.0",
-    "vite": "^4.0.0"
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "gsap": "^3.13.0",
-    "locomotive-scroll": "^4.1.4"
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
+    "classnames": "^2.5.1",
+    "lucide-react": "^0.537.0",
+    "next": "15.4.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
