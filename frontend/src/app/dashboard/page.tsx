@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusCircle, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { PlusCircle, CheckCircle, AlertCircle, Loader2, Calendar } from "lucide-react";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
+  const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0, today: 0, this_week: 0 });
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -20,23 +24,55 @@ export default function DashboardPage() {
     })
       .then((res) => res.json())
       .then(setUser);
-
-    // Get complaints
-    fetch("http://127.0.0.1:5000/complaints", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setComplaints(data);
-        setStats({
-          total: data.length,
-          pending: data.filter((c: any) => c.status === "Pending").length,
-          resolved: data.filter((c: any) => c.status === "Resolved").length,
-        });
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !user) return;
+    setLoading(true);
+
+    if (user.role === "admin") {
+      // Admin: Fetch stats
+      fetch(`http://127.0.0.1:5000/admin/complaints/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then(setStats);
+
+      // Admin: Fetch complaints with filters
+      const url = new URL("http://127.0.0.1:5000/admin/complaints");
+      url.searchParams.append("page", page.toString());
+      url.searchParams.append("per_page", "8");
+      if (search) url.searchParams.append("search", search);
+      if (statusFilter) url.searchParams.append("status", statusFilter);
+
+      fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setComplaints(data.items || []);
+          setPages(data.pages || 1);
+          setLoading(false);
+        });
+    } else {
+      // User: Fetch own complaints
+      fetch("http://127.0.0.1:5000/complaints/mine", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setComplaints(data);
+          setStats({
+            total: data.length,
+            pending: data.filter((c: any) => c.status === "Pending").length,
+            resolved: data.filter((c: any) => c.status === "Resolved").length,
+            today: 0,
+            this_week: 0,
+          });
+          setLoading(false);
+        });
+    }
+  }, [token, user, page, search, statusFilter]);
 
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-sky-950 via-slate-900 to-black text-white overflow-hidden p-6">
@@ -49,20 +85,50 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold">
           {user ? `Welcome, ${user.email}` : "Loading..."}
         </h1>
-        <Link
-          href="/submit"
-          className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"
-        >
-          <PlusCircle size={18} /> New Complaint
-        </Link>
+        {user?.role !== "admin" && (
+          <Link
+            href="/submit"
+            className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"
+          >
+            <PlusCircle size={18} /> New Complaint
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
-      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <StatCard icon={<AlertCircle />} label="Total Complaints" value={stats.total} color="from-purple-500 to-pink-500" />
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-5 gap-6 mb-10">
+        <StatCard icon={<AlertCircle />} label="Total" value={stats.total} color="from-purple-500 to-pink-500" />
         <StatCard icon={<Loader2 />} label="Pending" value={stats.pending} color="from-yellow-500 to-orange-500" />
         <StatCard icon={<CheckCircle />} label="Resolved" value={stats.resolved} color="from-green-500 to-emerald-500" />
+        {user?.role === "admin" && (
+          <>
+            <StatCard icon={<Calendar />} label="Today" value={stats.today} color="from-blue-500 to-cyan-500" />
+            <StatCard icon={<Calendar />} label="This Week" value={stats.this_week} color="from-pink-500 to-red-500" />
+          </>
+        )}
       </div>
+
+      {/* Admin Filters */}
+      {user?.role === "admin" && (
+        <div className="flex gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Search..."
+            className="px-3 py-2 rounded-lg text-black w-64"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            className="px-3 py-2 rounded-lg text-black"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+        </div>
+      )}
 
       {/* Complaints Table */}
       <div className="relative z-10 bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-lg">
@@ -76,6 +142,7 @@ export default function DashboardPage() {
                 <th className="py-2">Title</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Date</th>
+                {user?.role === "admin" && <th className="py-2">User</th>}
               </tr>
             </thead>
             <tbody>
@@ -94,6 +161,7 @@ export default function DashboardPage() {
                     </span>
                   </td>
                   <td className="py-3 text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
+                  {user?.role === "admin" && <td className="py-3">{c.user_email}</td>}
                 </tr>
               ))}
             </tbody>
@@ -102,6 +170,27 @@ export default function DashboardPage() {
           <p className="text-gray-400">No complaints found.</p>
         )}
       </div>
+
+      {/* Pagination for Admin */}
+      {user?.role === "admin" && pages > 1 && (
+        <div className="flex gap-2 mt-6">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+          <span>Page {page} of {pages}</span>
+          <button
+            disabled={page === pages}
+            onClick={() => setPage(page + 1)}
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </main>
   );
 }
