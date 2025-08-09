@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SubmitComplaintPage() {
   const [title, setTitle] = useState("");
@@ -7,10 +8,10 @@ export default function SubmitComplaintPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
+  const router = useRouter();
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // Fetch recent complaints on mount
   useEffect(() => {
     if (token) {
       fetch("http://127.0.0.1:5000/complaints/mine", {
@@ -54,7 +55,6 @@ export default function SubmitComplaintPage() {
         setMessage("✅ Complaint submitted successfully!");
         setTitle("");
         setDescription("");
-        // Refresh recent complaints
         fetch("http://127.0.0.1:5000/complaints/mine", {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -76,6 +76,16 @@ export default function SubmitComplaintPage() {
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-cyan-500 opacity-10 rounded-full blur-3xl animate-float-fast"></div>
 
       <div className="relative z-10 max-w-3xl mx-auto space-y-8">
+        {/* Back to Dashboard Button */}
+        <div className="flex justify-start">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 transition"
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+
         {/* Form Card */}
         <div className="bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-xl">
           <h1 className="text-3xl font-bold mb-6">Submit a Complaint</h1>

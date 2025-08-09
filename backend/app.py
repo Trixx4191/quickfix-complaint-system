@@ -45,6 +45,12 @@ class Complaint(db.Model):
     resolved_by = db.Column(db.String(120), nullable=True)
     resolved_description = db.Column(db.Text, nullable=True)
 
+class Announcement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 # Role-based admin check
 def admin_required(fn):
     @wraps(fn)
@@ -75,7 +81,7 @@ def login():
 
     if success:
         token = create_access_token(
-            identity=user.email,  # must be string
+            identity=user.email,
             additional_claims={"role": user.role}
         )
         return jsonify({
@@ -118,7 +124,6 @@ def create_complaint():
     title = data.get('title', '').strip()
     description = data.get('description', '').strip()
 
-    # Validation
     if not title or not description:
         return jsonify({'message': 'Missing title or description'}), 400
     if len(title) < 3:
@@ -136,12 +141,6 @@ def create_complaint():
 
     return jsonify({'message': 'Complaint created successfully'}), 201
 
-@app.route('/complaints', methods=['GET'])
-@admin_required
-def list_complaints():
-    complaints = Complaint.query.order_by(Complaint.created_at.desc()).all()
-    return jsonify([complaint_to_dict(c) for c in complaints]), 200
-
 @app.route('/complaints/mine', methods=['GET'])
 @jwt_required()
 def list_my_complaints():
@@ -153,7 +152,6 @@ def list_my_complaints():
 @admin_required
 def update_complaint_status(id):
     data = request.get_json()
-    claims = get_jwt()
     current_email = get_jwt_identity()
     complaint = Complaint.query.get_or_404(id)
 
@@ -228,6 +226,63 @@ def list_complaints_advanced():
         "current_page": complaints_paginated.page
     }), 200
 
+#  CSV Report for Complaints
+@app.route('/admin/complaints/report', methods=['GET'])
+@admin_required
+def generate_complaints_report():
+    from io import StringIO
+    import csv
+
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        return jsonify({'message': 'start_date and end_date are required'}), 400
+
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        # Add one day to end_date and use < for exclusive upper bound
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d") + timedelta(days=1)
+    except ValueError:
+        return jsonify({'message': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+    complaints = Complaint.query.filter(
+        Complaint.created_at >= start_date,
+        Complaint.created_at < end_date
+    ).order_by(Complaint.created_at.asc()).all()
+
+    si = StringIO()
+    writer = csv.writer(si)
+    writer.writerow([
+        "ID", "Title", "Description", "Status", "User Email",
+        "Created At", "Resolved At", "Resolved By", "Resolved Description"
+    ])
+
+    for c in complaints:
+        writer.writerow([
+            c.id,
+            c.title,
+            c.description,
+            c.status,
+            c.user_email,
+            c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else "",
+            c.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if c.resolved_at else "",
+            c.resolved_by or "",
+            c.resolved_description or ""
+        ])
+
+    output = si.getvalue()
+    si.close()
+
+    return (
+        output,
+        200,
+        {
+            "Content-Type": "text/csv",
+            "Content-Disposition": f"attachment; filename=complaints_report_{start_date_str}_to_{end_date_str}.csv"
+        }
+    )
+
 @app.route('/me', methods=['GET'])
 @jwt_required()
 def me():
@@ -237,6 +292,30 @@ def me():
         "role": claims.get("role")
     }), 200
 
+# --- Announcements ---
+@app.route('/announcements', methods=['GET'])
+@jwt_required()
+def get_announcements():
+    announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    return jsonify([announcement_to_dict(a) for a in announcements]), 200
+
+@app.route('/admin/announcements', methods=['POST'])
+@admin_required
+def create_announcement():
+    data = request.get_json()
+    title = data.get('title', '').strip()
+    message = data.get('message', '').strip()
+
+    if not title or not message:
+        return jsonify({'message': 'Title and message are required'}), 400
+
+    ann = Announcement(title=title, message=message)
+    db.session.add(ann)
+    db.session.commit()
+
+    return jsonify({'message': 'Announcement created successfully', 'announcement': announcement_to_dict(ann)}), 201
+
+# Serializers
 def complaint_to_dict(c):
     return {
         'id': c.id,
@@ -249,6 +328,14 @@ def complaint_to_dict(c):
         'resolved_at': c.resolved_at.isoformat() if c.resolved_at else None,
         'resolved_by': c.resolved_by,
         'resolved_description': c.resolved_description
+    }
+
+def announcement_to_dict(a):
+    return {
+        'id': a.id,
+        'title': a.title,
+        'message': a.message,
+        'created_at': a.created_at.isoformat() if a.created_at else None
     }
 
 # DB Init

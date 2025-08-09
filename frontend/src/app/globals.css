@@ -62,3 +62,47 @@ body {
   transform: rotateX(3deg) rotateY(3deg);
 }
 
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes flicker-fast {
+  0%, 100% {
+    opacity: 1;
+  }
+  10%, 30%, 50%, 70% {
+    opacity: 0.3;
+  }
+}
+/* Flickering star animation */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: twinkle 2s infinite ease-in-out;
+}
+
+.star.tiny {
+  width: 2px;
+  height: 2px;
+}
+
+.star.small {
+  width: 3px;
+  height: 3px;
+}
+
+.star.medium {
+  width: 4px;
+  height: 4px;
+}

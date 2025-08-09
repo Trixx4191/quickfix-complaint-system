@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PlusCircle, CheckCircle, AlertCircle, Loader2, Calendar } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
   const [complaints, setComplaints] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0, today: 0, this_week: 0 });
   const [search, setSearch] = useState("");
@@ -15,15 +17,27 @@ export default function DashboardPage() {
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
+  const reviews = [
+    { name: "Jane Doe", text: "Amazing dashboard! Makes my work so much easier." },
+    { name: "John Smith", text: "Clean UI and smooth experience." },
+    { name: "Emily Johnson", text: "The best complaint tracking tool I've used!" },
+  ];
+
   useEffect(() => {
     if (!token) return;
 
-    // Get user info
     fetch("http://127.0.0.1:5000/me", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then(setUser);
+
+    // Fetch announcements
+    fetch("http://127.0.0.1:5000/announcements", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then(setAnnouncements);
   }, [token]);
 
   useEffect(() => {
@@ -31,14 +45,12 @@ export default function DashboardPage() {
     setLoading(true);
 
     if (user.role === "admin") {
-      // Admin: Fetch stats
       fetch(`http://127.0.0.1:5000/admin/complaints/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
         .then(setStats);
 
-      // Admin: Fetch complaints with filters
       const url = new URL("http://127.0.0.1:5000/admin/complaints");
       url.searchParams.append("page", page.toString());
       url.searchParams.append("per_page", "8");
@@ -55,7 +67,6 @@ export default function DashboardPage() {
           setLoading(false);
         });
     } else {
-      // User: Fetch own complaints
       fetch("http://127.0.0.1:5000/complaints/mine", {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -191,6 +202,60 @@ export default function DashboardPage() {
           </button>
         </div>
       )}
+
+      {/* Announcements Carousel */}
+      {announcements.length > 0 && (
+        <section className="mt-16 relative z-10">
+          <h2 className="text-2xl font-bold mb-6">Latest Announcements</h2>
+          <div className="overflow-hidden relative">
+            <motion.div
+              className="flex gap-6"
+              initial={{ x: 0 }}
+              animate={{
+                x: [0, -((announcements.length - 1) * 320)],
+              }}
+              transition={{
+                repeat: Infinity,
+                repeatType: "loop",
+                duration: announcements.length * 3,
+                ease: "linear",
+              }}
+            >
+              {announcements.concat(announcements).map((a, index) => (
+                <div
+                  key={index}
+                  className="min-w-[300px] bg-white/10 backdrop-blur-lg p-6 rounded-xl shadow-lg flex-shrink-0"
+                >
+                  <h3 className="text-lg font-semibold text-cyan-400">{a.title}</h3>
+                  <p className="text-gray-300 mt-2">{a.message}</p>
+                  <p className="text-xs text-gray-500 mt-3">
+                    {new Date(a.created_at).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Animated Reviews */}
+      <section className="mt-16 relative z-10">
+        <h2 className="text-2xl font-bold mb-6">User Reviews</h2>
+        <div className="grid sm:grid-cols-3 gap-6">
+          {reviews.map((review, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.2, duration: 0.6 }}
+              className="bg-white/10 backdrop-blur-lg p-6 rounded-xl shadow-lg"
+            >
+              <p className="text-gray-300 mb-3">"{review.text}"</p>
+              <p className="text-cyan-400 font-semibold">- {review.name}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
