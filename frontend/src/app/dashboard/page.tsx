@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PlusCircle, CheckCircle, AlertCircle, Loader2, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const [pages, setPages] = useState(1);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const router = useRouter();
 
   const reviews = [
     { name: "Jane Doe", text: "Amazing dashboard! Makes my work so much easier." },
@@ -85,6 +87,11 @@ export default function DashboardPage() {
     }
   }, [token, user, page, search, statusFilter]);
 
+  function handleLogout() {
+    localStorage.removeItem("token");
+    router.push("/login");
+  }
+
   return (
     <main className="relative min-h-screen bg-gradient-to-br from-sky-950 via-slate-900 to-black text-white overflow-hidden p-6">
       {/* Floating Background */}
@@ -96,14 +103,22 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold">
           {user ? `Welcome, ${user.email}` : "Loading..."}
         </h1>
-        {user?.role !== "admin" && (
-          <Link
-            href="/submit"
-            className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"
+        <div className="flex gap-3 items-center">
+          {user?.role !== "admin" && (
+            <Link
+              href="/submit"
+              className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2"
+            >
+              <PlusCircle size={18} /> New Complaint
+            </Link>
+          )}
+          <button
+            onClick={handleLogout}
+            className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg text-white font-semibold shadow transition"
           >
-            <PlusCircle size={18} /> New Complaint
-          </Link>
-        )}
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

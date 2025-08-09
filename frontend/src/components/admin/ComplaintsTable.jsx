@@ -47,16 +47,23 @@ export default function ComplaintsTable({ data = [], onOpen = () => {}, onResolv
                     </button>
 
                     <button
-                      onClick={() => onResolve(c.id)}
-                      className="text-xs px-3 py-1 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white"
+                      onClick={() => onResolve(c.id, c.status)}
+                      className={`px-3 py-1 rounded-md text-white ${
+                        c.status === "Resolved"
+                          ? "bg-amber-600 hover:bg-amber-500"
+                          : "bg-cyan-600 hover:bg-cyan-500"
+                      }`}
                     >
-                      Resolve
+                      {c.status === "Resolved" ? "Reopen" : "Resolve"}
                     </button>
                   </div>
                 </div>
 
                 <div className="mt-2 text-sm text-zinc-300 line-clamp-2">{c.description}</div>
               </div>
+
+              
+              
             </div>
           ))}
         </div>

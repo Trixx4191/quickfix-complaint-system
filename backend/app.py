@@ -315,6 +315,38 @@ def create_announcement():
 
     return jsonify({'message': 'Announcement created successfully', 'announcement': announcement_to_dict(ann)}), 201
 
+@app.route('/admin/users', methods=['GET'])
+@admin_required
+def list_users():
+    users = User.query.all()
+    return jsonify([{
+        "id": u.id,
+        "email": u.email,
+        "role": u.role
+    } for u in users]), 200
+
+@app.route('/admin/users/<int:user_id>', methods=['PATCH'])
+@admin_required
+def update_user_role(user_id):
+    data = request.get_json()
+    role = data.get('role')
+    if role not in ['user', 'admin']:
+        return jsonify({'message': 'Invalid role'}), 400
+    user = User.query.get_or_404(user_id)
+    user.role = role
+    db.session.commit()
+    return jsonify({'message': 'Role updated', 'user': {
+        "id": user.id, "email": user.email, "role": user.role
+    }}), 200
+
+@app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted'}), 200
+
 # Serializers
 def complaint_to_dict(c):
     return {
