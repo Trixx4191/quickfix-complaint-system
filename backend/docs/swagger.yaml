@@ -14,6 +14,7 @@ paths:
       responses:
         200:
           description: API is running
+
   /login:
     post:
       summary: Login user and return JWT token
@@ -34,6 +35,7 @@ paths:
           description: Login successful
         401:
           description: Invalid credentials
+
   /api/register:
     post:
       summary: Register a new user
@@ -56,6 +58,7 @@ paths:
           description: User registered successfully
         409:
           description: User already exists
+
   /complaints:
     get:
       summary: List all complaints (Admin only)
@@ -83,6 +86,7 @@ paths:
       responses:
         201:
           description: Complaint created successfully
+
   /complaints/{id}:
     patch:
       summary: Update complaint status (Admin only)
@@ -111,6 +115,7 @@ paths:
           description: Status updated
         404:
           description: Complaint not found
+
   /me:
     get:
       summary: Get current user identity
@@ -119,6 +124,58 @@ paths:
       responses:
         200:
           description: Current user info
+
+  /admin/users:
+    get:
+      summary: List all users (Admin only)
+      security:
+        - Bearer: []
+      responses:
+        200:
+          description: List of users
+
+  /admin/users/{user_id}:
+    patch:
+      summary: Update a user's role (Admin only)
+      security:
+        - Bearer: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: role
+          description: New role for user
+          required: true
+          schema:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, admin]
+      responses:
+        200:
+          description: Role updated
+        400:
+          description: Invalid role
+        404:
+          description: User not found
+
+    delete:
+      summary: Delete a user (Admin only)
+      security:
+        - Bearer: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        200:
+          description: User deleted
+        404:
+          description: User not found
 
 securityDefinitions:
   Bearer:

@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden">
+    <main className="font-dune relative min-h-screen flex items-center justify-center px-6 overflow-hidden">
       {/* Background Stars */}
       <Stars />
 
@@ -58,6 +59,14 @@ export default function HomePage() {
 }
 
 function Stars() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   const stars = Array.from({ length: 80 }).map(() => {
     return {
       cx: Math.random() * 100 + "%",

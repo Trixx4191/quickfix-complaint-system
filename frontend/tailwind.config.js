@@ -1,8 +1,9 @@
-
 module.exports = {
-  // ...
   theme: {
     extend: {
+      fontFamily: {
+        dune: ['"Dune Rise"', 'sans-serif'],
+      },
       keyframes: {
         'float-slow': { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
         'float-mid': { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },

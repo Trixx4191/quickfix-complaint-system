@@ -10,13 +10,15 @@ from flask_jwt_extended import (
 from functools import wraps
 from datetime import datetime, timedelta
 from flasgger import Swagger
+import os
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 swagger = Swagger(app, template_file="docs/swagger.yaml")
 
 # Config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'users.db')}"
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
 
@@ -292,7 +294,7 @@ def me():
         "role": claims.get("role")
     }), 200
 
-# --- Announcements ---
+# Announcements
 @app.route('/announcements', methods=['GET'])
 @jwt_required()
 def get_announcements():
